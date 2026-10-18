@@ -1582,5 +1582,10 @@
   "card.failed": "임무 실패",
   "card.diverOne": "대원 {count}명",
   "card.divers": "대원 {count}명",
-  "roadmap.ongoing": "상시 진행"
+  "roadmap.ongoing": "상시 진행",
+  "consent.label": "데이터 수집 안내",
+  "consent.text": "사이트 개선을 위해 익명 이용 통계와, 이름·아이콘이 없는 게임 항목의 기록 일부를 수집합니다. 플레이어 이름과 위치는 수집하지 않습니다.",
+  "consent.policy": "자세히 보기",
+  "consent.ok": "확인",
+  "consent.off": "수집 끄기"
 }

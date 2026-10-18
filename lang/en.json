@@ -1582,5 +1582,10 @@
   "card.failed": "Mission failed",
   "card.diverOne": "{count} diver",
   "card.divers": "{count} divers",
-  "roadmap.ongoing": "Ongoing"
+  "roadmap.ongoing": "Ongoing",
+  "consent.label": "Data collection notice",
+  "consent.text": "To improve the site we collect anonymous usage counts and parts of the record for game items that have no name or icon yet. Player names and positions are never collected.",
+  "consent.policy": "Learn more",
+  "consent.ok": "OK",
+  "consent.off": "Turn off"
 }
