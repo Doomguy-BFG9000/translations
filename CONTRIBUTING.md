@@ -13,7 +13,7 @@ Thanks for helping. Most changes here are small wording fixes, and a pull reques
 | Report a wrong game name or a missing icon | Open an issue with the "Wrong or missing name / icon" form |
 | Report a bug or suggest a feature | Open an issue with the "Bug" or "Idea" form |
 
-Not sure? Open an issue.
+Not sure? Open an issue. Status labels (`roadmap`, `in-progress`, `deployed`) are set by maintainers.
 
 ## Editing text
 

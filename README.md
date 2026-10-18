@@ -16,6 +16,7 @@ Korean and English text for the [HD2 History replay viewer](https://hd2-replay.c
 | `lang/ko.json` | Korean text |
 | `lang/en.json` | English text |
 | `check.mjs` | Checks every language file; also runs on every pull request |
+| `scripts/roadmap-sync.mjs` | Moves roadmap rows when issue labels change (see below) |
 
 The viewer loads the two JSON files directly; nothing needs building.
 
@@ -38,6 +39,18 @@ The viewer loads the two JSON files directly; nothing needs building.
 Pick an issue form; Korean or English is fine.
 
 Please do not attach raw mission logs. They contain other players' names. Save the replay in the viewer and paste its share link instead.
+
+## Status labels
+
+Maintainers move issues with labels, and the [viewer roadmap](https://hd2-replay.code0987.me) follows automatically:
+
+| Label | Meaning | Roadmap |
+| --- | --- | --- |
+| `roadmap` | Planned | Listed under "Up next" |
+| `in-progress` | Being worked on | "In progress" |
+| `deployed` | Live on the site; the issue is then closed | "Shipped" |
+
+A maintainer can also comment `/roadmap` (optionally followed by an English title) to put an issue on the roadmap.
 
 ## License
 

@@ -1,0 +1,30 @@
+name: Sync roadmap
+# Moves viewer roadmap rows on issue labels and maintainers' /roadmap comments.
+# See scripts/roadmap-sync.mjs. Needs the HD2_ADMIN_TOKEN repository secret.
+on:
+  issues:
+    types: [labeled, unlabeled]
+  issue_comment:
+    types: [created]
+permissions:
+  issues: write
+jobs:
+  sync:
+    # Labels can only be changed by people with triage access. Comments can come from
+    # anyone, so only /roadmap comments from maintainers on issues (not PRs) start the job.
+    if: >-
+      (github.event_name == 'issues' && !github.event.issue.pull_request &&
+        contains(fromJSON('["roadmap","in-progress","deployed"]'), github.event.label.name)) ||
+      (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+        startsWith(github.event.comment.body, '/roadmap') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/roadmap-sync.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HD2_ADMIN_TOKEN: ${{ secrets.HD2_ADMIN_TOKEN }}
