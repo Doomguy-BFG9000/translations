@@ -23,6 +23,12 @@ Both files have exactly the same keys. A key missing from a language falls back 
 - Add a new key to both files in the same change.
 - This pack holds text only. Which game value maps to which key, and the icons, live in the viewer.
 
+## Issues
+
+This repository is also the viewer's public issue board: bugs, wrong or missing game names and icons, wording fixes and ideas. [Open an issue](https://github.com/hd2-history-viewer/translations/issues/new/choose) and pick a form; Korean or English is fine. Please do not attach raw mission logs, which contain other players' names; paste the viewer's share link instead.
+
+이 저장소는 뷰어의 공개 이슈 게시판도 겸합니다. 버그, 게임 이름·아이콘 오류, 문구 수정, 제안을 [이슈](https://github.com/hd2-history-viewer/translations/issues/new/choose)로 보내 주세요. 임무 로그 원본에는 다른 플레이어 이름이 들어 있으니 올리지 말고, 뷰어의 공유 링크를 붙여 주세요.
+
 ## License
 
 MIT; see `LICENSE`.

@@ -1468,5 +1468,7 @@
   "app.callCountOne": "{count}회 호출",
   "app.callCount": "{count}회 호출",
   "share.savedPrivately": "비공개 저장 완료",
-  "share.sizeMib": "{size} MiB"
+  "share.sizeMib": "{size} MiB",
+  "footer.reportIssue": "버그 제보·제안 (GitHub)",
+  "roadmap.feedbackLink": "제안이나 버그는 GitHub 이슈로 보내 주세요"
 }
