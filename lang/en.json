@@ -1470,5 +1470,6 @@
   "share.savedPrivately": "Saved privately",
   "share.sizeMib": "{size} MiB",
   "footer.reportIssue": "Report a bug or idea (GitHub)",
-  "roadmap.feedbackLink": "Send ideas and bugs as GitHub issues"
+  "roadmap.feedbackLink": "Send ideas and bugs as GitHub issues",
+  "roadmap.issueLink": "GitHub issue #{number}"
 }
