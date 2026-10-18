@@ -58,10 +58,6 @@ The mapping from game values to keys lives in the viewer, which is not public.
 
 ## How changes land
 
-The main copy of this repository lives on the maintainers' own server and is mirrored here.
-
-- A maintainer applies your pull request there and keeps you as the author.
-- The mirror then updates this repository.
-- So your pull request may show as closed rather than merged. That is expected.
+The main copy of this repository lives on the maintainers' own server and is kept in sync with GitHub both ways. A maintainer reviews and merges your pull request here as usual, and the merge flows back to the main copy automatically.
 
 By contributing, you agree that your changes are released under the [MIT License](LICENSE). Please follow the [code of conduct](https://github.com/hd2-history-viewer/.github/blob/main/CODE_OF_CONDUCT.md).
