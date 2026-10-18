@@ -1,0 +1,19 @@
+name: Close settled issues
+# Closes open issues whose "deployed" label is at least 7 days old (see scripts/roadmap-sync.mjs).
+on:
+  schedule:
+    - cron: '0 0 * * *' # 09:00 KST
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/roadmap-sync.mjs --close-stable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

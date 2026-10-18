@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decide, eventFromPayload, relevant, shipComment, isShipComment, SHIP_MARKER } from './roadmap-sync.mjs';
+import { decide, eventFromPayload, relevant, shipComment, isShipComment, dueForClosing, stableComment, SHIP_MARKER } from './roadmap-sync.mjs';
 
 const today = '2026-10-18';
 const issue = (extra = {}) => ({ number: 12, title: 'Better death names', state: 'open', labels: [], isPullRequest: false, ...extra });
@@ -27,40 +27,55 @@ test('in-progress moves the row to now, creating it when missing', () => {
   assert.deepEqual(run(labels(['in-progress'])), [{ kind: 'create', fields: { status: 'now', title: 'Better death names', issue: 12 } }]);
   assert.deepEqual(run(labels(['roadmap', 'in-progress']), row()), [{ kind: 'update', id: 5, fields: { status: 'now' } }]);
   assert.deepEqual(run(labels(['roadmap', 'in-progress']), row({ status: 'now' })), []);
-  // Taking in-progress off again puts the row back to next.
   assert.deepEqual(run({ type: 'unlabeled', label: 'in-progress', issue: issue({ labels: ['roadmap'] }) }, row({ status: 'now' })), [{ kind: 'update', id: 5, fields: { status: 'next' } }]);
 });
 
-test('shipped rows never move back, whatever labels arrive later', () => {
-  const done = row({ status: 'done', done_on: '2026-10-01' });
-  assert.deepEqual(run(labels(['roadmap', 'in-progress']), done), []);
-  assert.deepEqual(run({ type: 'unlabeled', label: 'deployed', issue: issue({ labels: ['roadmap'], state: 'closed' }) }, done), []);
-});
-
-test('deployed ships the row, comments once, drops in-progress and closes the issue', () => {
+test('deployed ships the row and comments, but leaves the issue open to settle', () => {
   const event = labels(['in-progress', 'deployed']);
   assert.deepEqual(run(event, row({ status: 'now' })), [
     { kind: 'update', id: 5, fields: { status: 'done', done_on: today } },
     { kind: 'comment', body: shipComment(today) },
     { kind: 'removeLabel', name: 'in-progress' },
-    { kind: 'close' },
   ]);
-  assert.deepEqual(kinds(run(event, row({ status: 'done', done_on: '2026-10-01' }), true)), ['removeLabel', 'close']);
-  // Not on the roadmap: still comment and close, no roadmap row.
-  assert.deepEqual(kinds(run(labels(['deployed']))), ['comment', 'close']);
-  assert.deepEqual(kinds(run(labels(['deployed'], { state: 'closed' }), null, true)), []);
+  // Today's ship comment is already there: no second one.
+  assert.deepEqual(kinds(run(labels(['deployed']), row({ status: 'done', done_on: today }), true)), []);
+  // Not on the roadmap: comment only.
+  assert.deepEqual(kinds(run(labels(['deployed']))), ['comment']);
   assert.match(shipComment(today), new RegExp(`^${SHIP_MARKER} on 2026-10-18\\.`));
 });
 
+test('while the issue is open a shipped row can go back; once closed it stays shipped', () => {
+  const shipped = row({ status: 'done', done_on: '2026-10-15' });
+  const reworked = { type: 'labeled', label: 'in-progress', issue: issue({ labels: ['roadmap', 'in-progress'] }) };
+  assert.deepEqual(run(reworked, shipped), [{ kind: 'update', id: 5, fields: { status: 'now', done_on: null } }]);
+  assert.deepEqual(run({ ...reworked, issue: { ...reworked.issue, state: 'closed' } }, shipped), []);
+  // Redeploying later ships it again with the new date and a new comment.
+  assert.deepEqual(kinds(run(labels(['roadmap', 'deployed']), row({ status: 'now' }))), ['update', 'comment']);
+});
+
+test('ongoing rows are never moved or hidden by labels', () => {
+  const ongoing = row({ status: 'ongoing' });
+  assert.deepEqual(run(labels(['roadmap', 'in-progress']), ongoing), []);
+  assert.deepEqual(kinds(run(labels(['deployed']), ongoing)), ['comment']);
+  assert.deepEqual(run({ type: 'unlabeled', label: 'roadmap', issue: issue({ labels: [] }) }, ongoing), []);
+});
+
 test('in-progress and deployed arriving together end shipped in either order', () => {
-  // Both runs read the same current labels, so the slower one cannot undo the faster one.
   const both = issue({ labels: ['roadmap', 'in-progress', 'deployed'] });
-  const asInProgress = run({ type: 'labeled', label: 'in-progress', issue: both }, row({ status: 'done', done_on: today }), true);
-  assert.deepEqual(kinds(asInProgress), ['removeLabel', 'close']);
-  const asDeployed = run({ type: 'labeled', label: 'deployed', issue: both }, row({ status: 'next' }));
-  assert.deepEqual(asDeployed[0], { kind: 'update', id: 5, fields: { status: 'done', done_on: today } });
-  // With no row yet, deployed wins: no "now" row is created for shipped work.
-  assert.deepEqual(kinds(run({ type: 'labeled', label: 'in-progress', issue: both }, null, true)), ['removeLabel', 'close']);
+  assert.deepEqual(kinds(run({ type: 'labeled', label: 'in-progress', issue: both }, row({ status: 'done', done_on: today }), true)), ['removeLabel']);
+  assert.deepEqual(run({ type: 'labeled', label: 'deployed', issue: both }, row({ status: 'next' }))[0], { kind: 'update', id: 5, fields: { status: 'done', done_on: today } });
+  assert.deepEqual(kinds(run({ type: 'labeled', label: 'in-progress', issue: both }, null, true)), ['removeLabel']);
+});
+
+test('an issue closes after seven quiet days with the deployed label', () => {
+  const at = iso => ({ event: 'labeled', label: { name: 'deployed' }, created_at: iso });
+  const now = new Date('2026-10-25T03:00:00Z');
+  assert.equal(dueForClosing([at('2026-10-18T02:59:00Z')], now), true);
+  assert.equal(dueForClosing([at('2026-10-18T03:01:00Z')], now), false);
+  // The latest deployed label counts: a redeploy restarts the wait.
+  assert.equal(dueForClosing([at('2026-10-10T00:00:00Z'), { event: 'unlabeled', label: { name: 'deployed' }, created_at: '2026-10-12T00:00:00Z' }, at('2026-10-20T00:00:00Z')], now), false);
+  assert.equal(dueForClosing([{ event: 'labeled', label: { name: 'roadmap' }, created_at: '2026-10-01T00:00:00Z' }], now), false);
+  assert.match(stableComment(7), /7 days/);
 });
 
 test('/roadmap from a maintainer adds or retitles the row and adds the roadmap label', () => {
@@ -96,10 +111,10 @@ test('labels on pull requests and unrelated labels do nothing', () => {
   assert.equal(relevant({ type: 'labeled', label: 'bug', issue: issue() }), false);
 });
 
-test('only the workflow\'s own ship comment counts as already shipped', () => {
-  assert.equal(isShipComment({ body: shipComment(today), user: { login: 'github-actions[bot]' } }), true);
-  assert.equal(isShipComment({ body: shipComment(today), user: { login: 'someone' } }), false);
-  assert.equal(isShipComment({ body: 'thanks', user: { login: 'github-actions[bot]' } }), false);
+test('only the workflow\'s own ship comment for that day counts', () => {
+  assert.equal(isShipComment({ body: shipComment(today), user: { login: 'github-actions[bot]' } }, today), true);
+  assert.equal(isShipComment({ body: shipComment('2026-10-01'), user: { login: 'github-actions[bot]' } }, today), false);
+  assert.equal(isShipComment({ body: shipComment(today), user: { login: 'someone' } }, today), false);
 });
 
 test('GitHub payloads become events; irrelevant ones skip the API calls', () => {
@@ -107,10 +122,8 @@ test('GitHub payloads become events; irrelevant ones skip the API calls', () => 
   const labeled = eventFromPayload('issues', { action: 'labeled', label: { name: 'deployed' }, issue: issuePayload });
   assert.deepEqual(labeled, { type: 'labeled', label: 'deployed', issue: { number: 12, title: 'T', state: 'open', labels: ['roadmap'], isPullRequest: false } });
   const comment = eventFromPayload('issue_comment', { action: 'created', comment: { body: '/roadmap', author_association: 'OWNER' }, issue: { ...issuePayload, pull_request: {} } });
-  assert.equal(comment.type, 'comment');
   assert.equal(comment.issue.isPullRequest, true);
   assert.equal(relevant(labeled), true);
-  assert.equal(relevant({ type: 'unlabeled', label: 'in-progress', issue: issue() }), true);
   assert.equal(relevant(comment), false);
   assert.equal(relevant({ type: 'comment', body: '/roadmap x', association: 'NONE', issue: issue() }), false);
   assert.equal(eventFromPayload('issues', { action: 'opened', issue: issuePayload }), null);

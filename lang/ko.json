@@ -1581,5 +1581,6 @@
   "card.success": "임무 성공",
   "card.failed": "임무 실패",
   "card.diverOne": "대원 {count}명",
-  "card.divers": "대원 {count}명"
+  "card.divers": "대원 {count}명",
+  "roadmap.ongoing": "상시 진행"
 }

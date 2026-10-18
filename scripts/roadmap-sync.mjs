@@ -3,12 +3,18 @@
 //
 // Each run reads the issue's labels as they are now and moves the linked row to match,
 // so runs that overlap or arrive late cannot undo each other:
-//   deployed     -> row "done" today; ship comment, in-progress removed, issue closed
+//   deployed     -> row "done" today; ship comment, in-progress removed; the issue stays
+//                   open while the change settles
 //   in-progress  -> row "now" (added if missing)
 //   roadmap      -> row "next" (added if missing)
 //   none of them -> row hidden
-// A shipped row is never moved back. A maintainer's "/roadmap [English title]" comment
-// also adds the row (or retitles it) and puts the roadmap label on the issue.
+// While the issue is open a shipped row can still move back (say, in-progress again after
+// a regression); once the issue is closed the row stays shipped. "ongoing" rows (continuous
+// work) are never touched. A maintainer's "/roadmap [English title]" comment also adds the
+// row (or retitles it) and puts the roadmap label on the issue.
+//
+// `--close-stable` (run daily) closes open issues whose deployed label is at least
+// STABLE_DAYS old, as completed, with a comment.
 //
 // decide() is pure; main() reads the event, calls the viewer admin API (HD2_ADMIN_TOKEN)
 // and the GitHub API (GITHUB_TOKEN), and stops at the first failure.
@@ -24,8 +30,16 @@ const MAINTAINERS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 const LABELS = new Set(['roadmap', 'in-progress', 'deployed']);
 const COMMAND = /^\/roadmap(?:\s+(.*))?$/;
 
+export const STABLE_DAYS = 7;
 export const shipComment = day => `${SHIP_MARKER} on ${day}.\n\n${day}에 사이트에 반영했습니다.`;
-export const isShipComment = comment => comment?.user?.login === BOT && String(comment.body ?? '').startsWith(SHIP_MARKER);
+// One ship comment per deploy day: a redeploy on a later day comments again.
+export const isShipComment = (comment, day) => comment?.user?.login === BOT && String(comment.body ?? '').startsWith(`${SHIP_MARKER} on ${day}.`);
+export const stableComment = days => `No problems reported in the ${days} days since it was deployed, so this is closed. Reopen it if the problem comes back.\n\n배포 후 ${days}일 동안 문제가 없어 닫습니다. 문제가 다시 생기면 이슈를 다시 열어 주세요.`;
+// Whether the latest "deployed" label on an issue is at least `days` old.
+export function dueForClosing(events, now, days = STABLE_DAYS) {
+  const labeled = events.filter(event => event.event === 'labeled' && event.label?.name === 'deployed').map(event => Date.parse(event.created_at)).filter(Number.isFinite);
+  return labeled.length > 0 && now.getTime() - Math.max(...labeled) >= days * 86400000;
+}
 // Cut by characters, not UTF-16 units, so an emoji is never split.
 const issueTitle = title => Array.from(String(title ?? '').replace(/[\x00-\x1f\x7f]/g, ' ').trim()).slice(0, 200).join('').trim();
 const command = body => String(body ?? '').split(/\r?\n/, 1)[0].trim().match(COMMAND);
@@ -49,12 +63,11 @@ export function relevant(event) {
   return LABELS.has(event.label);
 }
 
-// Ship side effects for an issue carrying the deployed label.
+// Ship side effects for an issue carrying the deployed label. The issue stays open to settle.
 function ship(issue, { today, shipCommentExists }) {
   const actions = [];
   if (!shipCommentExists) actions.push({ kind: 'comment', body: shipComment(today) });
   if (issue.labels.includes('in-progress')) actions.push({ kind: 'removeLabel', name: 'in-progress' });
-  if (issue.state === 'open') actions.push({ kind: 'close' });
   return actions;
 }
 
@@ -64,7 +77,10 @@ export function decide(event, row, { today, shipCommentExists }) {
   const log = message => [{ kind: 'log', message }];
   const status = wanted(issue.labels);
   const createFields = (title, target) => ({ status: target, title, issue: issue.number, ...(target === 'done' ? { done_on: today } : {}) });
-  const moveTo = target => target && row.status !== 'done' && row.status !== target ? { status: target, ...(target === 'done' ? { done_on: today } : {}) } : {};
+  // Ongoing rows never move; a shipped row moves back only while its issue is still open.
+  const settled = () => row.status === 'ongoing' || (row.status === 'done' && issue.state !== 'open');
+  const moveTo = target => !target || settled() || row.status === target ? {}
+    : { status: target, ...(target === 'done' ? { done_on: today } : row.status === 'done' ? { done_on: null } : {}) };
   const shipping = status === 'done' ? ship(issue, { today, shipCommentExists }) : [];
 
   if (event.type === 'comment') {
@@ -86,7 +102,7 @@ export function decide(event, row, { today, shipCommentExists }) {
     // Shipped work that never was on the roadmap gets no row; it is only commented and closed.
     return status && status !== 'done' ? [{ kind: 'create', fields: createFields(issueTitle(issue.title), status) }] : shipping;
   }
-  const fields = { ...(row.visible === Boolean(status) ? {} : { visible: Boolean(status) }), ...moveTo(status) };
+  const fields = { ...(row.status === 'ongoing' || row.visible === Boolean(status) ? {} : { visible: Boolean(status) }), ...moveTo(status) };
   return [...(Object.keys(fields).length ? [{ kind: 'update', id: row.id, fields }] : []), ...shipping];
 }
 
@@ -113,15 +129,15 @@ async function main() {
   event.issue = { ...event.issue, title: current.title, state: current.state, labels: (current.labels ?? []).map(label => label.name) };
   const { items } = await request(admin, { adminToken: env.HD2_ADMIN_TOKEN });
   const row = items.find(item => item.issue === event.issue.number) ?? null;
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   let shipCommentExists = false;
   if (wanted(event.issue.labels) === 'done') {
     for (let page = 1; page <= 20 && !shipCommentExists; page++) {
       const comments = await gh(`/comments?per_page=100&page=${page}`);
-      shipCommentExists = comments.some(isShipComment);
+      shipCommentExists = comments.some(comment => isShipComment(comment, today));
       if (comments.length < 100) break;
     }
   }
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   for (const action of decide(event, row, { today, shipCommentExists })) {
     console.log(`#${event.issue.number}: ${action.kind}${action.fields ? ` ${JSON.stringify(action.fields)}` : ''}${action.name ? ` ${action.name}` : ''}${action.message ? ` ${action.message}` : ''}`);
     if (action.kind === 'create') await request(admin, { adminToken: env.HD2_ADMIN_TOKEN, method: 'POST', body: action.fields });
@@ -133,6 +149,27 @@ async function main() {
   }
 }
 
+// Daily: close open issues whose deployed label has settled for STABLE_DAYS. Needs only GITHUB_TOKEN.
+async function closeStable() {
+  const env = process.env;
+  const repo = `https://api.github.com/repos/${env.GITHUB_REPOSITORY}`;
+  const gh = (path, options) => request(`${repo}${path}`, { token: env.GITHUB_TOKEN, ...options });
+  const issues = (await gh('/issues?state=open&labels=deployed&per_page=100')).filter(issue => !issue.pull_request);
+  const now = new Date();
+  for (const issue of issues) {
+    const events = [];
+    for (let page = 1; page <= 10; page++) {
+      const batch = await gh(`/issues/${issue.number}/events?per_page=100&page=${page}`);
+      events.push(...batch);
+      if (batch.length < 100) break;
+    }
+    if (!dueForClosing(events, now)) { console.log(`#${issue.number}: still settling`); continue; }
+    console.log(`#${issue.number}: closing after ${STABLE_DAYS} days`);
+    await gh(`/issues/${issue.number}/comments`, { method: 'POST', body: { body: stableComment(STABLE_DAYS) } });
+    await gh(`/issues/${issue.number}`, { method: 'PATCH', body: { state: 'closed', state_reason: 'completed' } });
+  }
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  main().catch(error => { console.error(error.message); process.exitCode = 1; });
+  (process.argv.includes('--close-stable') ? closeStable() : main()).catch(error => { console.error(error.message); process.exitCode = 1; });
 }

@@ -1581,5 +1581,6 @@
   "card.success": "Mission success",
   "card.failed": "Mission failed",
   "card.diverOne": "{count} diver",
-  "card.divers": "{count} divers"
+  "card.divers": "{count} divers",
+  "roadmap.ongoing": "Ongoing"
 }

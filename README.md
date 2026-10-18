@@ -48,7 +48,9 @@ Maintainers move issues with labels, and the [viewer roadmap](https://hd2-replay
 | --- | --- | --- |
 | `roadmap` | Planned | Listed under "Up next" |
 | `in-progress` | Being worked on | "In progress" |
-| `deployed` | Live on the site; the issue is then closed | "Shipped" |
+| `deployed` | Live on the site. The issue stays open for 7 days in case of problems, then closes on its own | "Shipped" |
+
+Remove `deployed` and add `in-progress` again if something breaks while the issue is still open; the roadmap follows. Continuous work (names and icons, matching the game's look) is listed as "Ongoing" without an issue.
 
 A maintainer can also comment `/roadmap` (optionally followed by an English title) to put an issue on the roadmap.
 
