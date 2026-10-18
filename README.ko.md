@@ -7,7 +7,7 @@
 Helldivers 2 임무 기록을 재생하는 비공식 웹 뷰어 [HD2 History 리플레이 뷰어](https://hd2-replay.code0987.me)의 한국어·영어 문구 저장소입니다. 뷰어의 공개 이슈 게시판도 겸합니다.
 
 - **버그·이름 오류 제보와 제안:** [이슈 열기](https://github.com/hd2-history-viewer/translations/issues/new/choose)
-- **번역 고치기:** [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)를 보세요
+- **번역 고치기, 새 언어 추가:** [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)를 보세요. 새 언어는 풀 리퀘스트로 환영합니다.
 
 ## 파일
 
@@ -15,12 +15,13 @@ Helldivers 2 임무 기록을 재생하는 비공식 웹 뷰어 [HD2 History 리
 | --- | --- |
 | `lang/ko.json` | 한국어 문구 |
 | `lang/en.json` | 영어 문구 |
-| `check.mjs` | 두 파일을 검사합니다. 모든 풀 리퀘스트에서도 자동으로 돕니다 |
+| `check.mjs` | 모든 언어 파일을 검사합니다. 모든 풀 리퀘스트에서도 자동으로 돕니다 |
 
 뷰어는 두 JSON 파일을 그대로 읽습니다. 빌드 과정은 없습니다.
 
 - 두 파일의 키는 똑같아야 합니다.
-- 한 언어에 키가 없으면 한국어 값을, 그것도 없으면 키 이름을 보여 줍니다.
+- 한 언어에 키가 없으면 영어, 한국어, 키 이름 순으로 대신 보여 줍니다.
+- 다른 언어는 `lang/<코드>.json`에 두며, 일부만 번역해도 됩니다.
 - 값이 비어 있으면 아무것도 보이지 않습니다. 예: `roadmapLanguage`는 영어에서 일부러 비워 둡니다.
 
 ## 키

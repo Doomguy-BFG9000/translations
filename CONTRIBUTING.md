@@ -9,6 +9,7 @@ Thanks for helping. Most changes here are small wording fixes, and a pull reques
 | You want to… | Do this |
 | --- | --- |
 | Fix a Korean or English sentence | Open a pull request that edits `lang/ko.json` or `lang/en.json` |
+| Translate the viewer into another language | Open a pull request that adds `lang/<code>.json`; see [New languages](#new-languages) |
 | Report a wrong game name or a missing icon | Open an issue with the "Wrong or missing name / icon" form |
 | Report a bug or suggest a feature | Open an issue with the "Bug" or "Idea" form |
 
@@ -25,6 +26,15 @@ Not sure? Open an issue.
 ```json
 "account.savedAtSize": "Saved {date} · {size} MiB"
 ```
+
+## New languages
+
+1. **Copy `lang/en.json`** to `lang/<code>.json`, using a language code such as `ja`, `de`, `zh-Hans` or `pt-BR`.
+2. **Translate what you can.** A partial file is fine: delete the keys you have not translated, and the viewer shows English for them.
+3. **Follow the same rules** as above: keep slots and no edge spaces. Use only keys that exist in `en.json`.
+4. **Open a pull request.** Mention whether you can help keep it up to date.
+
+The viewer menu only offers Korean and English today. When a new language arrives, the maintainers add it to the menu.
 
 ## Game names
 

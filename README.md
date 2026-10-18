@@ -7,7 +7,7 @@
 Korean and English text for the [HD2 History replay viewer](https://hd2-replay.code0987.me), an unofficial web viewer for Helldivers 2 mission exports. This repository is also the viewer's public issue board.
 
 - **Report a bug, a wrong name or an idea:** [open an issue](https://github.com/hd2-history-viewer/translations/issues/new/choose)
-- **Fix a translation:** see [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Fix a translation or add a new language:** see [CONTRIBUTING.md](CONTRIBUTING.md). New languages are welcome as pull requests.
 
 ## Files
 
@@ -15,12 +15,13 @@ Korean and English text for the [HD2 History replay viewer](https://hd2-replay.c
 | --- | --- |
 | `lang/ko.json` | Korean text |
 | `lang/en.json` | English text |
-| `check.mjs` | Checks both files; also runs on every pull request |
+| `check.mjs` | Checks every language file; also runs on every pull request |
 
 The viewer loads the two JSON files directly; nothing needs building.
 
 - Both files have exactly the same keys.
-- A key missing from a language falls back to Korean, then to the key itself.
+- A key missing from a language falls back to English, then Korean, then the key itself.
+- Other languages go in `lang/<code>.json` and may be partial.
 - An empty value shows nothing. For example, `roadmapLanguage` is empty in English on purpose.
 
 ## Keys
